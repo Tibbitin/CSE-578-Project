@@ -136,12 +136,12 @@ function drawBarChart() {
                 .duration(100)
                 .style("opacity", .9)
             tooltip.html("Edge Type: " + d[0] + "<br/>Count: " + d[1])
-                .style("left", (event.clientX + 20) + "px")
-                .style("top", (event.clientY + 30) + "px")
+                .style("left", (event.pageX + 20) + "px")
+                .style("top", (event.pageY + 30) + "px")
         })
         .on("mousemove", function(event){
-            tooltip.style('left', (event.clientX + 20) + "px")
-                    .style("top", (event.clientY + 30) + "px")
+            tooltip.style('left', (event.pageX + 20) + "px")
+                    .style("top", (event.pageY + 30) + "px")
         })
         .on("mouseout", function(d) {
             tooltip.transition()
