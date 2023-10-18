@@ -64,10 +64,15 @@ function drawLine(){
 
     drawAxes();
     
-    color = d3.scaleOrdinal().domain(Object.values(edgeTypes)).range(d3.schemePaired);
+    color = d3.scaleOrdinal().domain(Object.values(edgeTypes)).range(d3.schemeSet3);
 
     // Group data by eType
     const eTypes = Object.values(edgeTypes)
+
+    // Create a line generator for the current edge type
+    var line = d3.line()
+        .x(function (d) { return xScale(d.key)})
+        .y(function (d) { return yScale(d.value) });
 
     // Iterate through each edge type
     eTypes.forEach(function (edgeType) {
@@ -75,20 +80,43 @@ function drawLine(){
         var edgeData = Object.entries(eTypeFrequencyByMonth).map(function (d) {
             return { key: d[0], value: d[1][edgeType] || 0 };
         });
+        // edgeData.map(function (d) { console.log("x",xScale(d.key)); console.log("y",yScale(d.value),"value ", d.value)});
+        // Object.entries(eTypeFrequencyByMonth).map(function (d) {console.log(d[1])});
+
+        //group data according to d3 site
+        // const sumstat = d3.group(Object.entries(eTypeFrequencyByMonth), d => d[1][edgeType] || 0);
+        // console.log(sumstat)
+
+
         console.log(edgeType)
         console.log(edgeData)
 
-        // Create a line generator for the current edge type
-        var line = d3.line()
-            .x(function (d) { return xScale(d.key)})
-            .y(function (d) { return yScale(d.value); });
+        
     
-        // Create a path (line) element for the current edge type
+        // Create a path (line) element for the current edge type according to me/stack overflow
         svg.append("path")
             .data(edgeData)
             .attr("class", "line")
             .attr("d", line)
+            .attr("stroke-width", 1.5)
             .style("stroke", color(edgeType));
+
+        // Draw the line according to D3 Site
+        // svg.selectAll(".line")
+        // .data(sumstat)
+        // .join("path")
+        //     .attr("fill", "none")
+        //     .attr("class", "myLine")
+        //     .attr("stroke", function(d){ return color(d[0]) })
+        //     .attr("stroke-width", 1.5)
+        //     .attr("d", function(d){
+        //     return d3.line()
+        //         .x(function(d) { console.log(d[1][edgeType] || 0); return xScale(d[0]); })
+        //         .y(function(d) { return yScale(d[1][edgeType] || 0) })
+        //         (d[1])
+        //     })
+
+
     });
     
 };
@@ -99,7 +127,7 @@ function drawAxes(){
         
     // Add axes and labels =========================
     // X-Axis
-    const xScale = d3.scaleBand()
+    xScale = d3.scaleBand()
             .domain(months)
             .range([ 0, innerWidth ]);
 
@@ -118,9 +146,10 @@ function drawAxes(){
         .text("Month of Records[2025]");
 
     // Y-Axis
-    const yScale = d3.scaleLinear()
+    yScale = d3.scaleLinear()
         .domain([0, d3.max(months, month => d3.max(Object.keys(eTypeFrequencyByMonth[month]), eType => eTypeFrequencyByMonth[month][eType]))])
-        .range([innerHeight, 0]);
+        .nice()
+        .range([innerHeight, 10]);
 
     svg.append("g")
         .attr("transform", `translate(${margin.left},0)`)
