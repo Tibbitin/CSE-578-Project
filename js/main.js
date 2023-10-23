@@ -69,12 +69,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 .text('Count')
 
             drawBarChart();
+            drawSourcePieChart(filtered_graph_data);
+            drawTargetPieChart(filtered_graph_data);
         });
 });
 
 
 function getCurData() {
-    console.log('trace:getCurData()')
+    // console.log('trace:getCurData()')
     const year_input = d3.select('#year-input')
     curYear = year_input.property('value')
 
@@ -98,8 +100,8 @@ function drawBarChart() {
     
     getCurData()
 
-    console.log(eTypeMap)
-    console.log(filtered_graph_data)
+    // console.log(eTypeMap)
+    // console.log(filtered_graph_data)
 
     xScale = d3.scaleBand()
         .domain(Object.keys(eTypeMap))
@@ -150,3 +152,162 @@ function drawBarChart() {
         });
 }
 
+function drawSourcePieChart(data){
+    // console.log(data);
+    const sourceFrequency = {};
+    data.forEach(d => {
+        if (sourceFrequency[d.Source]) {
+            sourceFrequency[d.Source]++;
+        } else {
+            sourceFrequency[d.Source] = 1;
+        }
+    });
+    const sourceData = Object.keys(sourceFrequency).map(key => ({
+        source: key,
+        frequency: sourceFrequency[key]
+    }));
+    // console.log(sourceData);
+    // const width = 360;
+    // const height = 360;
+    const radius = Math.min(innerWidth, innerHeight) / 2;
+    const color = d3.scaleOrdinal(d3.schemeSet1);
+    const pieSvg = d3.select('#sourcepieChartSvg')
+       .attr('width', width)
+       .attr('height', height)
+       .append('g')
+       .attr('transform', 'translate(' + (width / 2) + 
+       ',' + (height / 2) + ')');
+
+    const arc = d3.arc()
+    .innerRadius(0)            
+    .outerRadius(radius);
+
+    const pie = d3.pie()
+       .value(function(d) { return d.frequency; })
+       .sort(null);
+
+    const path = pieSvg.selectAll('path')
+    .data(pie(sourceData))
+    .enter()
+    .append('path')
+    .attr('d', arc)
+    .attr('fill', function(d, i) {
+        return color(d.data.source);
+    })
+    .style("stroke", "black")
+    .style("stroke-width", 1)
+    .on("mouseover", function(event, d) {
+        tooltip.transition()
+            .duration(100)
+            .style("opacity", .9)
+        tooltip.html("Source: " + d.data.source + "<br/>Count: " + d.data.frequency)
+            .style("left", (event.pageX + 20) + "px")
+            .style("top", (event.pageY + 30) + "px")
+    })
+    .on("mousemove", function(event){
+        tooltip.style('left', (event.pageX + 20) + "px")
+                .style("top", (event.pageY + 30) + "px")
+    })
+    .on("mouseout", function(d) {
+        tooltip.transition()
+                .duration(200)
+                .style('opacity', 0)
+    });
+
+    document.getElementById('edge-select').addEventListener('change', function(event){
+        if(document.getElementById('edge-select').value === 'Total'){
+            drawSourcePieChart(filtered_graph_data);
+        }
+        else{
+            const selectedType = +document.getElementById('edge-select').value;
+            // console.log(selectedType);
+            // console.log(filtered_graph_data);
+            const edgeFilteredData = filtered_graph_data.filter(d => d["eType"] === selectedType);
+            // console.log(edgeFilteredData);
+            // console.log(filtered_graph_data);
+            d3.select('#sourcepieChartSvg').selectAll("*").remove();
+            drawSourcePieChart(edgeFilteredData);
+        }
+    })
+
+}
+
+function drawTargetPieChart(data){
+    
+    const targetFrequency = {};
+    data.forEach(d => {
+        if (targetFrequency[d.Target]) {
+            targetFrequency[d.Target]++;
+        } else {
+            targetFrequency[d.Target] = 1;
+        }
+    });
+    const targetData = Object.keys(targetFrequency).map(key => ({
+        target: key,
+        frequency: targetFrequency[key]
+    }));
+    // console.log(targetData);
+    // const width = 360;
+    // const height = 360;
+    const radius = Math.min(innerWidth, innerHeight) / 2;
+    const color = d3.scaleOrdinal(d3.schemeSet1);
+    const pieSvg = d3.select('#targetpieChartSvg')
+       .attr('width', width)
+       .attr('height', height)
+       .append('g')
+       .attr('transform', 'translate(' + (width / 2) + 
+       ',' + (height / 2) + ')');
+
+    const arc = d3.arc()
+    .innerRadius(0)            
+    .outerRadius(radius);
+
+    const pie = d3.pie()
+       .value(function(d) { return d.frequency; })
+       .sort(null);
+
+    const path = pieSvg.selectAll('path')
+    .data(pie(targetData))
+    .enter()
+    .append('path')
+    .attr('d', arc)
+    .attr('fill', function(d, i) {
+        return color(d.data.target);
+    })
+    .style("stroke", "black")
+    .style("stroke-width", 1)
+    .on("mouseover", function(event, d) {
+        tooltip.transition()
+            .duration(100)
+            .style("opacity", .9)
+        tooltip.html("Target: " + d.data.target + "<br/>Count: " + d.data.frequency)
+            .style("left", (event.pageX + 20) + "px")
+            .style("top", (event.pageY + 30) + "px")
+    })
+    .on("mousemove", function(event){
+        tooltip.style('left', (event.pageX + 20) + "px")
+                .style("top", (event.pageY + 30) + "px")
+    })
+    .on("mouseout", function(d) {
+        tooltip.transition()
+                .duration(200)
+                .style('opacity', 0)
+    });
+
+    document.getElementById('targetedge-select').addEventListener('change', function(event){
+        if(document.getElementById('targetedge-select').value === 'Total'){
+            drawTargetPieChart(filtered_graph_data);
+        }
+        else{
+            const selectedType = +document.getElementById('targetedge-select').value;
+            // console.log(selectedType);
+            // console.log(filtered_graph_data);
+            const edgeFilteredData = filtered_graph_data.filter(d => d["eType"] === selectedType);
+            // console.log(edgeFilteredData);
+            // console.log(filtered_graph_data);
+            d3.select('#targetpieChartSvg').selectAll("*").remove();
+            drawTargetPieChart(edgeFilteredData);
+        }
+    })
+
+}
