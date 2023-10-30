@@ -68,6 +68,9 @@ function drawLine(){
 
     color = d3.scaleOrdinal().domain(Object.values(edgeTypes)).range(d3.schemeSet1);
     drawAxesLabels();
+
+    // Create a group element for the edge type
+    lineGroup = svg.append("g");
     
     // Iterate through each edge type
     eTypes.forEach(function (edgeType) {
@@ -83,9 +86,7 @@ function drawLine(){
         var line = d3.line()
                     .x(function (d) { return xScale(d.key)+130})
                     .y(function (d) { return yScale(d.value) });
-
-        // Create a group element for the current edge type
-        var lineGroup = svg.append("g");
+        
     
         // Create a path (line) element for the current edge type
         lineGroup.append("path")
@@ -96,13 +97,69 @@ function drawLine(){
             .attr("stroke-width", 1.5)
             .style("stroke", color(edgeType));
     });
+    console.log(eTypeFrequencyByMonth)
+
+    // Create tooltip
+    tooltip = d3
+        .select('body')
+        .append('div')
+        .attr('class', 'd3-tooltip')
+        .style('position', 'absolute')
+        .style('padding', '10px')
+        .style('background-color', 'lightgray')
+        .attr("fill", "black")
+        .style('border', 'solid')
+        .style('display', 'none')
+        .style("border-width", "2px")
+        .style('border-radius', '4px');
+
+    tooltipLine = lineGroup.append('line');
+
+    // area to display the tooltip
+    tipBox = lineGroup.append('rect')
+        .attr('width', innerWidth-100)
+        .attr('height', innerHeight)
+        .attr('opacity', 0)
+        .attr("transform", "translate(100,0)")
+        .on('mousemove', drawTooltip)
+        .on('mouseout', removeTooltip);
+
 };
+
+function removeTooltip() {
+    if (tooltip) tooltip.style('display', 'none');
+    if (tooltipLine) tooltipLine.attr('stroke', 'none');
+}
+  
+function drawTooltip() {
+    const [x, y] = d3.pointer(event); // Get the pointer's coordinates relative to tipBox
+    const index = Math.floor((x) / xScale.step()); // Calculate the index of the band
+    const month = xScale.domain()[index];
+        
+    tooltipLine.attr('stroke', 'black')
+        .attr('x1', xScale(month)+142)
+        .attr('x2', xScale(month)+142)
+        .attr('y1', 0)
+        .attr('y2', height);
+
+    // Display tooltip
+    tooltip.html(month)
+    .style('display', 'block')
+    .style('left', event.pageX + 20 + 'px')
+    .style('top', event.pageY - 20 + 'px')
+    .selectAll()
+    .data(Object.entries(eTypeFrequencyByMonth[month]))
+    .enter().append('div')
+    .html(function(d) {return d[0] + ": " + d[1];})
+    
+}
 
 function drawAxesLabels(){
     // Extract the unique months
     const months = Object.keys(eTypeFrequencyByMonth);
         
     // Add axes and labels =========================
+    console.log(months)
     // X-Axis
     xScale = d3.scaleBand()
             .domain(months)
@@ -113,14 +170,16 @@ function drawAxesLabels(){
 
     svg.append("g")
         .attr("transform", "translate(60," + innerHeight + ")")
-        .call(d3.axisBottom(xScale).tickFormat(d => formatTime(new Date(d))));
+        .call(d3.axisBottom(xScale)
+            .tickFormat(d => formatTime(new Date(d)))
+        );
 
     svg.append("g")
         .append("text")
-        .attr("dx", 350)
+        .attr("dx", 450)
         .attr("dy", 592)
         .style("text-anchor", "middle")
-        .text("Month of Records[2025]");
+        .text("Month of Records");
 
     // Y-Axis
     yScale = d3.scaleLinear()
