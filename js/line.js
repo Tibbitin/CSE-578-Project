@@ -24,9 +24,6 @@ document.addEventListener('DOMContentLoaded', function () {
     height = +svg.style('height').replace('px','');
     innerWidth = width - margin.left - margin.right;
     innerHeight = height - margin.top - margin.bottom;
-
-    
-
     // This will load your CSV file and store them into the array.
    Promise.all([d3.csv('data/Q1-Graph1.csv')])
         .then(function (values) {
@@ -47,27 +44,51 @@ document.addEventListener('DOMContentLoaded', function () {
                 };
             });
 
-            drawLine();
+            xAxis = svg.append("g")
+                .attr("transform", "translate(60," + (innerHeight-50) + ")")
+            yAxis = svg.append("g")
+                .attr("transform", `translate(${margin.left},0)`)
+            
+            // Create an object to store the frequency of eTypes by month
+            eTypeFrequencyByMonth = {};
+
+            lineData.forEach(item => {
+                const time = item.Time.toISOString();
+                const month = time.slice(0, 7); // Extract YYYY-MM for grouping by month
+                eTypeFrequencyByMonth[month] = eTypeFrequencyByMonth[month] || {};
+                eTypeFrequencyByMonth[month][item.eType] = (eTypeFrequencyByMonth[month][item.eType] || 0) + 1;
+            });
+            // Extract the unique months
+            months = Object.keys(eTypeFrequencyByMonth);
+
+            addSlider(); // add time range slider
+            drawLine(months, eTypeFrequencyByMonth);
     });
+    svg.append("g")
+        .append("text")
+        .attr("dx", 450)
+        .attr("dy", 650)
+        .style("text-anchor", "middle")
+        .text("Month of Records");
+    svg.append("g")
+        .append("text")
+        .attr('transform','rotate(-90)')
+        .attr("dx", -300)
+        .attr("dy", 20)
+        .style("text-anchor", "middle")
+        .text("Frequency of Edges");
+
+    
 });
 
-function drawLine(){
-    // Create an object to store the frequency of eTypes by month
-    eTypeFrequencyByMonth = {};
-
-    lineData.forEach(item => {
-        const time = item.Time.toISOString();
-        const month = time.slice(0, 7); // Extract YYYY-MM for grouping by month
-        eTypeFrequencyByMonth[month] = eTypeFrequencyByMonth[month] || {};
-        eTypeFrequencyByMonth[month][item.eType] = (eTypeFrequencyByMonth[month][item.eType] || 0) + 1;
-    });
+function drawLine(months, eTypeFrequencyByMonth){
 
     // List of edge types
     eTypes = Object.values(edgeTypes)
     // console.log(eTypes)
 
     color = d3.scaleOrdinal().domain(Object.values(edgeTypes)).range(d3.schemeSet1);
-    drawAxesLabels();
+    drawAxesLabels(months, eTypeFrequencyByMonth);
 
     // Create a group element for the edge type
     lineGroup = svg.append("g");
@@ -92,12 +113,15 @@ function drawLine(){
         lineGroup.append("path")
             .data([edgeData])
             .attr("class", "line")
+            .merge(lineGroup)
+            .transition()
+            .duration(2000)
             .attr("d", line)
             .attr("fill", "None")
             .attr("stroke-width", 1.5)
             .style("stroke", color(edgeType));
     });
-    console.log(eTypeFrequencyByMonth)
+    // console.log(eTypeFrequencyByMonth)
 
     // Create tooltip
     tooltip = d3
@@ -124,6 +148,7 @@ function drawLine(){
         .on('mousemove', drawTooltip)
         .on('mouseout', removeTooltip);
 
+    
 };
 
 function removeTooltip() {
@@ -144,22 +169,19 @@ function drawTooltip() {
 
     // Display tooltip
     tooltip.html(month)
-    .style('display', 'block')
-    .style('left', event.pageX + 20 + 'px')
-    .style('top', event.pageY - 20 + 'px')
-    .selectAll()
-    .data(Object.entries(eTypeFrequencyByMonth[month]))
-    .enter().append('div')
-    .html(function(d) {return d[0] + ": " + d[1];})
+        .style('display', 'block')
+        .style('left', event.pageX + 20 + 'px')
+        .style('top', event.pageY - 20 + 'px')
+        .selectAll()
+        .data(Object.entries(eTypeFrequencyByMonth[month]))
+        .enter().append('div')
+        .html(function(d) {return d[0] + ": " + d[1];})
+        .style("color", d => color(d[0]))
     
 }
 
-function drawAxesLabels(){
-    // Extract the unique months
-    const months = Object.keys(eTypeFrequencyByMonth);
-        
+function drawAxesLabels(months, eTypeFrequencyByMonth){
     // Add axes and labels =========================
-    console.log(months)
     // X-Axis
     xScale = d3.scaleBand()
             .domain(months)
@@ -168,36 +190,22 @@ function drawAxesLabels(){
     // Format the X-axis labels to display months
     const formatTime = d3.timeFormat("%b");
 
-    svg.append("g")
-        .attr("transform", "translate(60," + innerHeight + ")")
+    
+        
+    xAxis.transition().duration(1000)
         .call(d3.axisBottom(xScale)
             .tickFormat(d => formatTime(new Date(d)))
         );
 
-    svg.append("g")
-        .append("text")
-        .attr("dx", 450)
-        .attr("dy", 592)
-        .style("text-anchor", "middle")
-        .text("Month of Records");
+    
 
     // Y-Axis
     yScale = d3.scaleLinear()
         .domain([0, d3.max(months, month => d3.max(Object.keys(eTypeFrequencyByMonth[month]), eType => eTypeFrequencyByMonth[month][eType]))])
         .nice()
-        .range([innerHeight, 10]);
+        .range([innerHeight-50, 10]);
 
-    svg.append("g")
-        .attr("transform", `translate(${margin.left},0)`)
-        .call(d3.axisLeft(yScale));
-
-    svg.append("g")
-        .append("text")
-        .attr('transform','rotate(-90)')
-        .attr("dx", -300)
-        .attr("dy", 20)
-        .style("text-anchor", "middle")
-        .text("Frequency of Edges");
+    yAxis.transition().duration(1000).call(d3.axisLeft(yScale));
 
     // Add legend
     // Define legend container and position
@@ -229,5 +237,44 @@ function drawAxesLabels(){
         .attr("x", 25)
         .attr("y", 5)
         .text(d => d);
-    
+}
+
+function addSlider(){
+    // Define the slider
+    const sliderRange = d3
+        .sliderBottom()
+        .min(0)
+        .max(months.length - 1)
+        .step(1)
+        .width(600)
+        .tickFormat(d => months[d])
+        .ticks(12)
+        .default([0, months.length - 1])
+        .fill('#85bb65');
+
+
+    sliderRange.on('onchange', val => {
+        // Update the months array with the selected range
+        const selectedMonths = months.slice(val[0], val[1] + 1);
+
+        const selectedData = {};
+
+        for (const month of selectedMonths) {
+            if (eTypeFrequencyByMonth.hasOwnProperty(month)) {
+                selectedData[month] = eTypeFrequencyByMonth[month];
+            }
+        }
+
+        drawAxesLabels(selectedMonths, selectedData)
+        drawLine(selectedMonths, selectedData)
+    });
+
+    // Add the slider to svg
+    const gRange = svg.append('svg')
+        .attr('width', 1000)
+        .attr('height', 1000)
+        .append('g')
+        .attr('transform', 'translate(150,660)');
+
+    gRange.call(sliderRange);
 }
